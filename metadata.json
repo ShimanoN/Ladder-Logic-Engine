@@ -1,0 +1,5 @@
+{
+  "name": "Ladder Logic Engine",
+  "description": "A React-based PLC Ladder Logic visualizer that parses linear instructions into a branched 2D circuit grid.",
+  "requestFramePermissions": []
+}
