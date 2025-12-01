@@ -4,10 +4,11 @@ import { parseLadderLogic } from './logic/parser';
 import { calculatePowerFlow } from './logic/powerFlow'; // Import BFS Logic
 import { LadderGrid } from './components/LadderGrid';
 import { PersistenceControls } from './components/PersistenceControls'; // Import UI
+import { MnemonicImporter } from './components/MnemonicImporter'; // Import Mnemonic UI
 import { Instruction, GridCell } from './types';
 import { useLadderEditor } from './hooks/useLadderEditor';
 import { useLadderSimulator } from './hooks/useLadderSimulator';
-import { PlayCircle, Cpu, RefreshCw, Trash2, GitMerge, Plus, CornerDownRight, X, Play, Square, Zap } from 'lucide-react';
+import { PlayCircle, Cpu, RefreshCw, Trash2, GitMerge, Plus, CornerDownRight, X, Play, Square, Zap, FileText } from 'lucide-react';
 
 const TEST_CASE_SELF_HOLDING: Instruction[] = [
   { id: 1, type: "LD", value: "X0" },
@@ -28,6 +29,7 @@ export default function App() {
   const [instructions, setInstructions] = useState<Instruction[]>([]);
   const [grid, setGrid] = useState<GridCell[][]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isImporterOpen, setIsImporterOpen] = useState(false);
 
   // Editor Hook
   const { updateInstruction, deleteInstruction, insertSeries, insertParallel } = useLadderEditor(instructions, setInstructions);
@@ -90,7 +92,7 @@ export default function App() {
             <div>
               <h1 className="text-xl font-bold text-gray-900 leading-tight">Ladder Logic Engine</h1>
               <p className="text-xs text-gray-500 font-mono flex items-center gap-2">
-                Phase 6: Live Wire Visualization
+                Phase 7: Text Importer
                 {isSimulating && <span className="text-green-600 font-bold animate-pulse flex items-center gap-1">● RUNNING</span>}
               </p>
             </div>
@@ -100,6 +102,15 @@ export default function App() {
              
              {/* Persistence Controls */}
              <PersistenceControls instructions={instructions} onLoad={loadCase} />
+
+             {/* Mnemonic Import Button */}
+             <button 
+               onClick={() => setIsImporterOpen(true)}
+               className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+               title="Import Mnemonic Text"
+             >
+               <FileText size={18} />
+             </button>
 
              <div className="w-px h-8 bg-gray-300 hidden md:block"></div>
 
@@ -305,18 +316,25 @@ export default function App() {
 
           <div className="bg-slate-800 rounded-xl shadow-md p-6 text-slate-300">
              <h3 className="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-slate-600 pb-2">
-              Phase 6: Live Wires & Persistence
+              Phase 7: Mnemonic Importer
             </h3>
             <p className="text-sm leading-relaxed mb-4">
-              <strong className="text-green-400">Power Flow:</strong> The engine now traces electricity through the wires.
+              <strong className="text-green-400">Copy & Paste Logic:</strong> You can now import text-based Ladder Logic.
             </p>
             <ul className="text-sm space-y-2 list-disc pl-4 text-slate-400">
-               <li><span className="text-white font-bold">BFS Algorithm:</span> Calculates energized paths dynamically from the left rail.</li>
-               <li><span className="text-white font-bold">Live Wires:</span> Wires and connection lines glow green when power reaches them.</li>
-               <li><span className="text-white font-bold">Save/Load:</span> Persist your circuits to local storage or export as JSON.</li>
+               <li><span className="text-white font-bold">Standard format:</span> Supports generic <code>LD X0</code> style syntax.</li>
+               <li><span className="text-white font-bold">Integration:</span> Quickly test logic from existing PLC projects or tutorials.</li>
+               <li><span className="text-white font-bold">Parsing:</span> Automatically validates instructions and skips comments.</li>
             </ul>
           </div>
         </section>
+
+        {/* Modal */}
+        <MnemonicImporter 
+          isOpen={isImporterOpen} 
+          onClose={() => setIsImporterOpen(false)} 
+          onImport={loadCase} 
+        />
       </main>
     </div>
   );
