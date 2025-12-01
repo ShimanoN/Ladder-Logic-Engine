@@ -1,3 +1,4 @@
+
 export type InstructionType = 'LD' | 'LDI' | 'AND' | 'ANI' | 'OR' | 'ORI' | 'OUT' | 'ORB' | 'ANB';
 
 export interface Instruction {
@@ -20,4 +21,12 @@ export interface GridCell {
   connections: GridConnections;
   isPowerRail?: boolean; // Special flag for the left-most cells
   sourceIndex: number | null; // The index in the Instruction[] array that generated this cell
+}
+
+export interface LadderData {
+  instructions: Instruction[];
+  meta: {
+    version: string;
+    date: string;
+  }
 }
