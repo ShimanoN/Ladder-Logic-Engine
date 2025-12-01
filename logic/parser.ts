@@ -157,13 +157,9 @@ export const parseLadderLogic = (instructions: Instruction[]): GridCell[][] => {
     if (isStackOp) {
        if (inst.type === 'MPS') {
           // Push Branch Point
-          // Place node at current location
           placeX = currentBlock.endX; 
           placeY = currentBlock.minY;
           mpsStack.push({ x: placeX, y: placeY });
-          
-          // MPS technically doesn't consume width logic-wise in some viewers, but here we treat it as a node.
-          // We add a connection right to indicate flow into the node? No, it IS the node.
           
        } else if (inst.type === 'MRD') {
           // Peek Branch Point
@@ -174,16 +170,9 @@ export const parseLadderLogic = (instructions: Instruction[]): GridCell[][] => {
              maxYUsed = newY;
              placeY = newY;
              
-             // Draw Vertical Bus from Point.y down to NewY
              drawVerticalBus(cells, point.x, point.y, newY);
              
              currentBlock.activeRows.add(newY);
-             // We are essentially resetting X to the split point
-             // But 'currentBlock.endX' tracks the furthest right. 
-             // This is tricky. For simple visualization, we assume the previous branch logic ended.
-             // We reset current X context effectively.
-             // For this engine: we rely on the parser placing the MRD cell at point.x, newY
-             // And subsequent instructions (AND etc) will naturally follow placeX + 1.
           }
        } else if (inst.type === 'MPP') {
           // Pop Branch Point
@@ -210,18 +199,18 @@ export const parseLadderLogic = (instructions: Instruction[]): GridCell[][] => {
         placeY = currentBlock.minY; 
     }
     
-    // If we just placed an MRD/MPP, we want to ensure the NEXT instruction 
-    // knows where to go. 
-    // MRD/MPP act as "Virtual Sources" at their (x,y).
-    // The instruction itself renders as a junction.
-    
     // Create Cell
+    // CRITICAL FIX: Explicitly disable 'left' connection for MRD/MPP
+    // These instructions represent a vertical drop, so connecting left (horizontally)
+    // creates a visual "short circuit" artifact.
+    const isVerticalBranch = inst.type === 'MRD' || inst.type === 'MPP';
+
     const newCell: GridCell = {
       x: placeX,
       y: placeY,
       instruction: inst,
       connections: {
-        left: placeX > 0,
+        left: isVerticalBranch ? false : placeX > 0,
         right: (inst.type !== 'OUT' && inst.type !== 'MOV' && inst.type !== 'RST' && inst.type !== 'SET' && inst.type !== 'MOVP'), 
         up: false,
         down: false,
@@ -234,19 +223,8 @@ export const parseLadderLogic = (instructions: Instruction[]): GridCell[][] => {
     if (isParallel) {
         currentBlock.endX = Math.max(currentBlock.endX, placeX + 1);
     } else if (isStackOp) {
-        // Stack ops don't extend "length" in the same way, but they occupy a grid cell
-        // Reset block X context if we jumped back (MRD/MPP)
         if (inst.type === 'MRD' || inst.type === 'MPP') {
-           // We jumped back to 'placeX'. The next instruction should go to placeX + 1.
-           // However, currentBlock.endX might be far ahead from previous branches.
-           // In this simplified parser, we might assume the previous branches are "done".
-           // Ideally we track X per row.
-           // FORCE reset endX for this row?
-           // Let's just set endX = placeX + 1. 
-           // NOTE: This assumes simplified "One branch active at a time" parsing.
            currentBlock.endX = placeX + 1;
-           
-           // Update minY to this new row so subsequent ANDs stay here
            currentBlock.minY = placeY;
         } else {
            currentBlock.endX = placeX + 1;
@@ -305,11 +283,9 @@ function getAllRowsInBlock(block: BlockContext, cells: GridCell[]): Set<number> 
 }
 
 function drawVerticalBus(cells: GridCell[], x: number, fromY: number, toY: number) {
-   // Connect fromY down to toY at column x
    for (let y = fromY; y <= toY; y++) {
       let cell = cells.find(c => c.x === x && c.y === y);
       
-      // If cell doesn't exist (gap), create wire
       if (!cell) {
          cell = {
             x, y, instruction: null,
@@ -319,18 +295,13 @@ function drawVerticalBus(cells: GridCell[], x: number, fromY: number, toY: numbe
          cells.push(cell);
       }
       
-      // Update connections
-      // Source (fromY): Down
       if (y === fromY) {
          cell.connections.down = true;
       }
-      // Target (toY): Up
       else if (y === toY) {
          cell.connections.up = true;
-         // MRD/MPP cells also connect Right (logic flow output)
          cell.connections.right = true; 
       }
-      // Middle: Up + Down
       else {
          cell.connections.up = true;
          cell.connections.down = true;
